@@ -11,4 +11,19 @@ uint8_t tcp_recv_u8 (TCPsocket s) {
     return v;
 }
 
+uint32_t tcp_recv_u32 (TCPsocket s) {
+    uint32_t v;
+    tcp_recv_n(s, sizeof(v), (char*)&v);
+    return be32toh(v);
+}
+
+void tcp_send_u8 (TCPsocket s, uint8_t v) {
+    assert(SDLNet_TCP_Send(s, &v, sizeof(v)) == sizeof(v));
+}
+
+void tcp_send_u32 (TCPsocket s, uint32_t v) {
+    v = htobe32(v);
+    assert(SDLNet_TCP_Send(s, &v, sizeof(v)) == sizeof(v));
+}
+
 
