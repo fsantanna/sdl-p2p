@@ -18,10 +18,10 @@ uint32_t tcp_recv_u32 (TCPsocket s) {
 }
 
 void tcp_send_n (TCPsocket s, int n, char* buf) {
-    //assert(SDLNet_TCP_Send(s,buf,n) == 0);
-    int x = SDLNet_TCP_Send(s,buf,n);
-    printf(">>> %d, %s\n", x, SDLNet_GetError());
-    assert(x == n);
+    assert(SDLNet_TCP_Send(s,buf,n) == n);
+    //int x = SDLNet_TCP_Send(s,buf,n);
+    //printf(">>> %d, %s\n", x, SDLNet_GetError());
+    //assert(x == n);
 }
 
 void tcp_send_u8 (TCPsocket s, uint8_t v) {
