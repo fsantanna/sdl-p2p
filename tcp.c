@@ -1,7 +1,7 @@
-void tcp_recv_n (TCPsocket s, int N, char* buf) {
+void tcp_recv_n (TCPsocket s, int n, char* buf) {
     int i = 0;
-    while (i < N) {
-        i += SDLNet_TCP_Recv(s, &buf[i], N-i);
+    while (i < n) {
+        i += SDLNet_TCP_Recv(s, &buf[i], n-i);
     }
 }
 
@@ -17,15 +17,18 @@ uint32_t tcp_recv_u32 (TCPsocket s) {
     return be32toh(v);
 }
 
+void tcp_send_n (TCPsocket s, int n, char* buf) {
+    //assert(SDLNet_TCP_Send(s,buf,n) == 0);
+    int x = SDLNet_TCP_Send(s,buf,n);
+    printf(">>> %d, %s\n", x, SDLNet_GetError());
+    assert(x == n);
+}
+
 void tcp_send_u8 (TCPsocket s, uint8_t v) {
-    assert(SDLNet_TCP_Send(s, &v, sizeof(v)) == sizeof(v));
+    tcp_send_n(s, sizeof(v), (char*) &v);
 }
 
 void tcp_send_u32 (TCPsocket s, uint32_t v) {
     v = htobe32(v);
-    assert(SDLNet_TCP_Send(s, &v, sizeof(v)) == sizeof(v));
-}
-
-void tcp_send_n (TCPsocket s, int n, char* buf) {
-    assert(SDLNet_TCP_Send(s, buf, n) == n);
+    tcp_send_n(s, sizeof(v), (char*) &v);
 }

@@ -11,11 +11,11 @@ exit
 
 int main (int argc, char** argv) {
     assert(argc == 3);
-    char peer = atoi(argv[1]);
+    char me   = atoi(argv[1]);
     int  port = atoi(argv[2]);
-    p2p_init(peer,port);
-    if (peer == 2) {
-        p2p_link("localhost", 5001, 2);
+    p2p_init(me,port);
+    if (me == 2) {
+        p2p_link("localhost", 5001, 1);
     }
     while (1) {
         p2p_step();

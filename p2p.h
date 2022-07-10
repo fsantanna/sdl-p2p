@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-void p2p_init (uint8_t peer, int port);
+void p2p_init (uint8_t me, int port);
 void p2p_quit (void);
 void p2p_step (void);
 void p2p_send (uint32_t v);
