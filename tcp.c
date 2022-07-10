@@ -26,4 +26,6 @@ void tcp_send_u32 (TCPsocket s, uint32_t v) {
     assert(SDLNet_TCP_Send(s, &v, sizeof(v)) == sizeof(v));
 }
 
-
+void tcp_send_n (TCPsocket s, int n, char* buf) {
+    assert(SDLNet_TCP_Send(s, buf, n) == n);
+}
