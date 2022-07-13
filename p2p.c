@@ -86,6 +86,7 @@ static void* f (void* arg) {
 
     while (1) {
         LOCK();
+        assert(PAKS_n < PAKS_N);
         p2p_pak* pak = &PAKS[PAKS_n++];
         UNLOCK();
 
@@ -127,6 +128,7 @@ void p2p_step (void) {
 void p2p_send (uint32_t v) {
     LOCK();
     uint32_t seq = ++NET[ME].seq;
+    assert(PAKS_n < PAKS_N);
     p2p_pak* pak = &PAKS[PAKS_n++];
     UNLOCK();
     *pak = (p2p_pak) { ME, seq, sizeof(uint32_t), {} };
