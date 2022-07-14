@@ -62,16 +62,20 @@ void p2p_bcast (p2p_pak* pak) {
         if (i == ME) continue;
         TCPsocket s = NET[i].s;
         if (s == NULL) continue;
+        LOCK();
         tcp_send_u8 (s, pak->src);
         tcp_send_u32(s, pak->seq);
         tcp_send_u8 (s, pak->n);
         tcp_send_n  (s, pak->n, pak->buf);
+        UNLOCK();
     }
 }
 
 static void* f (void* arg) {
     TCPsocket s = (TCPsocket) arg;
+    LOCK();
     tcp_send_u8(s, ME);
+    UNLOCK();
     uint8_t oth = tcp_recv_u8(s);
 
     LOCK();
@@ -143,4 +147,15 @@ void p2p_link (char* host, int port, uint8_t oth) {
     assert(s != NULL);
     pthread_t t;
     assert(pthread_create(&t, NULL,f,(void*)s) == 0);
+}
+
+void p2p_dump (void) {
+    for (int i=0; i<5; i++) {
+        if (NET[i].s == NULL) {
+            printf("- ");
+        } else {
+            printf("%d ", NET[i].seq);
+        }
+    }
+    printf("\n");
 }

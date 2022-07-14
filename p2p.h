@@ -7,3 +7,4 @@ void p2p_quit (void);
 void p2p_step (void);
 void p2p_send (uint32_t v);
 void p2p_link (char* host, int port, uint8_t me);
+void p2p_dump (void);
