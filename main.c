@@ -25,6 +25,10 @@ int NET[5][5] = {
     { 0, 0, 0, 1, 0 }
 };
 
+void cb (uint8_t n, char* pay) {
+    printf(">>> pak = %d\n", be32toh(*(uint32_t*)pay));
+}
+
 int main (int argc, char** argv) {
     for (int i=0; i<5; i++) {
         for (int j=0; j<5; j++) {
@@ -37,7 +41,7 @@ int main (int argc, char** argv) {
     int  port = atoi(argv[2]);
 
     srand(me);
-    p2p_init(me,port);
+    p2p_init(me,port,cb);
 
     sleep(1);
     for (int i=me+1; i<5; i++) {
@@ -52,7 +56,7 @@ int main (int argc, char** argv) {
         if (rand()%20000 == 0) {
 printf(">>> send from %d\n", me);
             static int i = 0;
-            p2p_send(i++);
+            p2p_send(me*1000 + i++);
         }
         if (rand()%50000 == 0) {
 printf(">>> dump from %d\n", me);

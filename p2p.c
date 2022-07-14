@@ -14,13 +14,6 @@ typedef struct {
     uint32_t seq;
 } p2p_net;
 
-typedef struct {
-    uint8_t  src;
-    uint32_t seq;
-    uint8_t  n;
-    char     buf[P2P_MAX];
-} p2p_pak;
-
 static uint8_t ME = -1;
 
 static p2p_net NET[NET_N];
@@ -32,7 +25,10 @@ static pthread_mutex_t L;
 #define LOCK()   pthread_mutex_lock(&L)
 #define UNLOCK() pthread_mutex_unlock(&L);
 
-void p2p_init (uint8_t me, int port) {
+static void (*p2p_cb) (uint8_t, char*);
+
+void p2p_init (uint8_t me, int port, void(*cb)(uint8_t,char*)) {
+    p2p_cb = cb;
     assert(me < NET_N);
     ME = me;
     for (int i=0; i<NET_N; i++) {
@@ -100,7 +96,7 @@ static void* f (void* arg) {
         *pak = (p2p_pak) { src, seq, n, {} };
         tcp_recv_n(s, n, &pak->buf[0]);
 
-        printf("> packet > src=%d seq=%d\n", pak->src, pak->seq);
+        p2p_cb(pak->n, pak->buf);
 
         LOCK();
         int cur = NET[src].seq;
@@ -137,6 +133,7 @@ void p2p_send (uint32_t v) {
     UNLOCK();
     *pak = (p2p_pak) { ME, seq, sizeof(uint32_t), {} };
     * (uint32_t*) pak->buf = htobe32(v);
+    p2p_cb(pak->n, pak->buf);
     p2p_bcast(pak);
 }
 
