@@ -18,6 +18,7 @@ static uint8_t ME = -1;
 
 static p2p_net NET[NET_N];
 
+static int PAKS_i = 0;
 static int PAKS_n = 0;
 static p2p_pak PAKS[PAKS_N];
 
@@ -25,10 +26,7 @@ static pthread_mutex_t L;
 #define LOCK()   pthread_mutex_lock(&L)
 #define UNLOCK() pthread_mutex_unlock(&L);
 
-static void (*p2p_cb) (uint8_t, char*);
-
-void p2p_init (uint8_t me, int port, void(*cb)(uint8_t,char*)) {
-    p2p_cb = cb;
+void p2p_init (uint8_t me, int port) {
     assert(me < NET_N);
     ME = me;
     for (int i=0; i<NET_N; i++) {
@@ -53,7 +51,7 @@ void p2p_quit (void) {
 	SDLNet_Quit();
 }
 
-void p2p_bcast (p2p_pak* pak) {
+static void p2p_bcast2 (p2p_pak* pak) {
     for (int i=0; i<NET_N; i++) {
         if (i == ME) continue;
         TCPsocket s = NET[i].s;
@@ -81,7 +79,7 @@ static void* f (void* arg) {
     UNLOCK();
 
     for (int i=0; i<PAKS_n; i++) {
-        p2p_bcast(&PAKS[i]);
+        p2p_bcast2(&PAKS[i]);
     }
 
     while (1) {
@@ -96,8 +94,6 @@ static void* f (void* arg) {
         *pak = (p2p_pak) { src, seq, n, {} };
         tcp_recv_n(s, n, &pak->buf[0]);
 
-        p2p_cb(pak->n, pak->buf);
-
         LOCK();
         int cur = NET[src].seq;
         if (seq > cur) {
@@ -107,7 +103,7 @@ static void* f (void* arg) {
         UNLOCK();
 
         if (seq > cur) {
-            p2p_bcast(pak);
+            p2p_bcast2(pak);
         }
     }
 
@@ -115,17 +111,28 @@ static void* f (void* arg) {
     return NULL;
 }
 
-void p2p_step (void) {
-    TCPsocket s = SDLNet_TCP_Accept(NET[ME].s);
-    if (s != NULL) {
-        IPaddress* ip = SDLNet_TCP_GetPeerAddress(s);
-        assert(ip != NULL);
-        pthread_t t;
-        assert(pthread_create(&t, NULL,f,(void*)s) == 0);
+int p2p_step (uint8_t* n, char** buf) {
+    while (1) {
+        TCPsocket s = SDLNet_TCP_Accept(NET[ME].s);
+        if (s == NULL) {
+            break;
+        } else {
+            IPaddress* ip = SDLNet_TCP_GetPeerAddress(s);
+            assert(ip != NULL);
+            pthread_t t;
+            assert(pthread_create(&t, NULL,f,(void*)s) == 0);
+        }
     }
+    if (PAKS_i < PAKS_n) {
+        *n   = PAKS[PAKS_i].n;
+        *buf = PAKS[PAKS_i].buf;
+        PAKS_i++;
+        return 1;
+    }
+    return 0;
 }
 
-void p2p_send (uint32_t v) {
+void p2p_bcast (uint32_t v) {
     LOCK();
     uint32_t seq = ++NET[ME].seq;
     assert(PAKS_n < PAKS_N);
@@ -133,8 +140,7 @@ void p2p_send (uint32_t v) {
     UNLOCK();
     *pak = (p2p_pak) { ME, seq, sizeof(uint32_t), {} };
     * (uint32_t*) pak->buf = htobe32(v);
-    p2p_cb(pak->n, pak->buf);
-    p2p_bcast(pak);
+    p2p_bcast2(pak);
 }
 
 void p2p_link (char* host, int port, uint8_t oth) {
