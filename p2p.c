@@ -79,6 +79,9 @@ static void* f (void* arg) {
     UNLOCK();
 
     for (int i=0; i<PAKS_n; i++) {
+        if (PAKS[i].seq == 0) {
+            break;
+        }
         p2p_bcast2(&PAKS[i]);
     }
 
@@ -86,13 +89,18 @@ static void* f (void* arg) {
         LOCK();
         assert(PAKS_n < PAKS_N);
         p2p_pak* pak = &PAKS[PAKS_n++];
+        pak->seq = 0;   // not ready
         UNLOCK();
 
         uint8_t  src = tcp_recv_u8(s);
         uint32_t seq = tcp_recv_u32(s);
         uint8_t  n   = tcp_recv_u8(s);
-        *pak = (p2p_pak) { src, seq, n, {} };
+        *pak = (p2p_pak) { src, 0, n, {} };
         tcp_recv_n(s, n, &pak->buf[0]);
+        LOCK();
+//printf("+++++ %d %d %d\n", src, seq, n);
+        pak->seq = seq; // now ready
+        UNLOCK();
 
         LOCK();
         int cur = NET[src].seq;
@@ -123,7 +131,7 @@ int p2p_step (uint8_t* n, char** buf) {
             assert(pthread_create(&t, NULL,f,(void*)s) == 0);
         }
     }
-    if (PAKS_i < PAKS_n) {
+    if (PAKS_i<PAKS_n && PAKS[PAKS_i].seq>0) {
         *n   = PAKS[PAKS_i].n;
         *buf = PAKS[PAKS_i].buf;
         PAKS_i++;
@@ -138,6 +146,7 @@ void p2p_bcast (uint32_t v) {
     assert(PAKS_n < PAKS_N);
     p2p_pak* pak = &PAKS[PAKS_n++];
     UNLOCK();
+//printf(">>>>> %d\n", seq);
     *pak = (p2p_pak) { ME, seq, sizeof(uint32_t), {} };
     * (uint32_t*) pak->buf = htobe32(v);
     p2p_bcast2(pak);

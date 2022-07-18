@@ -56,9 +56,9 @@ int main (int argc, char** argv) {
         }
 
         if (rand()%20000 == 0) {
-printf(">>> send from %d = %d\n", me, i);
             static int i = 0;
-            p2p_bcast(me*1000 + i++);
+printf(">>> send from %d = %d\n", me, i);
+            p2p_bcast((me+1)*10000 + i++);
         }
         if (rand()%50000 == 0) {
 printf(">>> dump from %d\n", me);
