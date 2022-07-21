@@ -1,6 +1,6 @@
 #if 0
 #!/bin/sh
-gcc -Wall -I ../tml/ `sdl2-config --cflags` ../tml/tml.c p2p.c move.c -o xmove `sdl2-config --libs` -lpthread -lSDL2_net
+gcc -Wall `sdl2-config --cflags` p2p.c tml.c move.c -o xmove `sdl2-config --libs` -lpthread -lSDL2_net
 exit
 #endif
 
@@ -33,13 +33,10 @@ struct {
 
 SDL_Renderer* REN = NULL;
 
-int ME = -1;
-
 int main (int argc, char** argv) {
     assert(argc == 3);
     char me   = atoi(argv[1]);
     int  port = atoi(argv[2]);
-    ME = me;
 
     assert(SDL_Init(SDL_INIT_VIDEO) == 0);
 
@@ -102,29 +99,13 @@ void cb_eff (int trv) {
 }
 
 int cb_rec (SDL_Event* sdl, tml_evt* evt) {
-    {
-        uint8_t n;
-        p2p_pay pay;
-        if (p2p_step(&n, &pay)) {
-            assert(n == 2);
-            assert(pay.i2._1 == TML_EVT_KEY);
-            *evt = (tml_evt) { pay.i2._1, {.i1=pay.i2._2} };
-printf(">>> %d / %d\n", ME, pay.i2._2);
+    switch (sdl->type) {
+        case SDL_QUIT:
+            return TML_RET_QUIT;
+        case SDL_KEYDOWN: {
+            int key = sdl->key.keysym.sym;
+            *evt = (tml_evt) { TML_EVT_KEY, {.i1=key} };
             return TML_RET_REC;
-        }
-    }
-
-    if (sdl != NULL) {
-        switch (sdl->type) {
-            case SDL_QUIT:
-                return TML_RET_QUIT;
-            case SDL_KEYDOWN: {
-                int key = sdl->key.keysym.sym;
-                p2p_pay pay = { .i2={TML_EVT_KEY,key} };
-    printf("<<< %d / %d\n", ME, key);
-                p2p_bcast(2, &pay);
-                break;
-            }
         }
     }
     return TML_RET_NONE;

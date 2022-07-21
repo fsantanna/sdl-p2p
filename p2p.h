@@ -1,15 +1,15 @@
 #include <stdint.h>
 
 typedef union {
-    int i1;
+    uint32_t i1;
     struct {
-        int _1,_2;
+        uint32_t _1,_2;
     } i2;
     struct {
-        int _1,_2,_3;
+        uint32_t _1,_2,_3;
     } i3;
     struct {
-        int _1,_2,_3,_4;
+        uint32_t _1,_2,_3,_4;
     } i4;
 } p2p_pay;
 

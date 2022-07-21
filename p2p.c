@@ -60,7 +60,7 @@ static void p2p_bcast2 (p2p_pak* pak) {
         tcp_send_u8 (s, pak->src);
         tcp_send_u32(s, pak->seq);
         tcp_send_u8 (s, pak->n);
-        tcp_send_n  (s, pak->n*sizeof(int), (char*)&pak->pay);
+        tcp_send_n  (s, pak->n*sizeof(uint32_t), (char*)&pak->pay);
         UNLOCK();
     }
 }
@@ -96,7 +96,7 @@ static void* f (void* arg) {
         uint32_t seq = tcp_recv_u32(s);
         uint8_t  n   = tcp_recv_u8(s);
         *pak = (p2p_pak) { src, 0, n, {} };
-        tcp_recv_n(s, n*sizeof(int), (char*)&pak->pay);
+        tcp_recv_n(s, n*sizeof(uint32_t), (char*)&pak->pay);
 
         LOCK();
 //printf("+++++ %d %d %d\n", src, seq, n);
