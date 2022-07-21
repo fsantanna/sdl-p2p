@@ -1,7 +1,7 @@
 #include <SDL.h>
 #include <assert.h>
 
-#include "p2p.h"
+//#include "p2p.h"
 #include "tml.h"
 
 #define MAX_EVT 10000
@@ -23,12 +23,6 @@ void tml_loop (int fps, int n, void* mem, void(*cb_sim)(p2p_evt), void(*cb_eff)(
         int      tick;
     } S = { SDL_GetTicks()+mpf, mpf, 0 };
 
-    struct {
-        int tot;
-        int nxt;
-        tml_tick_evt buf[MAX_EVT];
-    } Q = { 0, 0, {} };
-
     cb_sim((p2p_evt) { TML_EVT_INIT, 0, {} });
     memcpy(MEM[0], mem, n);
     //printf("<<< memcpy %d\n", 0);
@@ -41,11 +35,6 @@ _RET_REC_: {
         if (p2p_step(&evt)) {
             cb_sim(evt);
             cb_eff(0);
-#if 0
-        if (Q.nxt < Q.tot) {
-            cb_sim(Q.buf[Q.nxt++].evt);
-            cb_eff(0);
-#endif
         } else {
             uint32_t now = SDL_GetTicks();
             if (now < S.nxt) {
@@ -72,12 +61,6 @@ _RET_REC_: {
                         break;
                     case TML_RET_QUIT:
                         return;
-#if 0
-                    case TML_RET_REC:
-                        assert(Q.tot < MAX_EVT);
-                        Q.buf[Q.tot++] = (tml_tick_evt) { S.tick, evt };
-                        break;
-#endif
                     case TML_RET_REC: {
                         p2p_bcast(S.tick, &evt);
                         break;
@@ -98,7 +81,7 @@ _RET_TRV_: {
     uint32_t prv = SDL_GetTicks();
     uint32_t nxt = SDL_GetTicks();
     int tick = S.tick;
-    int tot  = Q.tot;
+    int tot  = PAKS.n;
     int new  = -1;
 
     while (1) {
@@ -119,14 +102,14 @@ _RET_TRV_: {
 
             // skip events before fst
             int e = 0;
-            for (; e<Q.tot && Q.buf[e].tick<fst; e++);
+            for (; e<PAKS.n && PAKS.buf[e].tick<fst; e++);
 
             for (int i=fst; i<=new; i++) {
                 if (i > fst) { // first tick already loaded
                     cb_sim((p2p_evt) { TML_EVT_TICK, 1, {.i1=i} });
                 }
-                while (e<Q.tot && Q.buf[e].tick==i) {
-                    cb_sim(Q.buf[e].evt);
+                while (e<PAKS.n && PAKS.buf[e].tick==i) {
+                    cb_sim(PAKS.buf[e].evt);
                     e++;
                 }
             }
@@ -149,8 +132,8 @@ _RET_TRV_: {
                 S.nxt += (SDL_GetTicks() - prv);
                 //printf("OUT %d\n", tick);
                 S.tick = tick;
-                Q.nxt = Q.tot = tot;
-                //Q.nxt = MIN(Q.nxt, Q.tot);
+                PAKS.i = PAKS.n = tot;
+                //PAKS.i = MIN(PAKS.i, PAKS.n);
                 goto _RET_REC_;
                 break;
             case TML_RET_TRV: {

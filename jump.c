@@ -1,6 +1,6 @@
 #if 0
 #!/bin/sh
-gcc -g -Wall `sdl2-config --cflags` p2p.c tml.c jump.c -o xjump `sdl2-config --libs` -lpthread -lSDL2_net
+gcc -g -Wall `sdl2-config --cflags` p2p.c jump.c -o xjump `sdl2-config --libs` -lpthread -lSDL2_net
 exit
 #endif
 
