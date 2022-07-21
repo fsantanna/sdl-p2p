@@ -60,7 +60,7 @@ static void p2p_bcast2 (p2p_pak* pak) {
         tcp_send_u8 (s, pak->src);
         tcp_send_u32(s, pak->seq);
         tcp_send_u8 (s, pak->n);
-        tcp_send_n  (s, pak->n, pak->buf);
+        tcp_send_n  (s, pak->n*sizeof(int), (char*)&pak->pay);
         UNLOCK();
     }
 }
@@ -96,7 +96,8 @@ static void* f (void* arg) {
         uint32_t seq = tcp_recv_u32(s);
         uint8_t  n   = tcp_recv_u8(s);
         *pak = (p2p_pak) { src, 0, n, {} };
-        tcp_recv_n(s, n, &pak->buf[0]);
+        tcp_recv_n(s, n*sizeof(int), (char*)&pak->pay);
+
         LOCK();
 //printf("+++++ %d %d %d\n", src, seq, n);
         pak->seq = seq; // now ready
@@ -119,7 +120,7 @@ static void* f (void* arg) {
     return NULL;
 }
 
-int p2p_step (uint8_t* n, char** buf) {
+int p2p_step  (uint8_t* n, p2p_pay* pay) {
     while (1) {
         TCPsocket s = SDLNet_TCP_Accept(NET[ME].s);
         if (s == NULL) {
@@ -132,23 +133,28 @@ int p2p_step (uint8_t* n, char** buf) {
         }
     }
     if (PAKS_i<PAKS_n && PAKS[PAKS_i].seq>0) {
-        *n   = PAKS[PAKS_i].n;
-        *buf = PAKS[PAKS_i].buf;
+        *n = PAKS[PAKS_i].n;
+        pay->i4._1 = be32toh(PAKS[PAKS_i].pay.i4._1);
+        pay->i4._2 = be32toh(PAKS[PAKS_i].pay.i4._2);
+        pay->i4._3 = be32toh(PAKS[PAKS_i].pay.i4._3);
+        pay->i4._4 = be32toh(PAKS[PAKS_i].pay.i4._4);
         PAKS_i++;
         return 1;
     }
     return 0;
 }
 
-void p2p_bcast (uint32_t v) {
+void p2p_bcast (uint8_t n, p2p_pay* pay) {
     LOCK();
     uint32_t seq = ++NET[ME].seq;
     assert(PAKS_n < PAKS_N);
     p2p_pak* pak = &PAKS[PAKS_n++];
     UNLOCK();
-//printf(">>>>> %d\n", seq);
-    *pak = (p2p_pak) { ME, seq, sizeof(uint32_t), {} };
-    * (uint32_t*) pak->buf = htobe32(v);
+    *pak = (p2p_pak) { ME, seq, n, {} };
+    pak->pay.i4._1 = htobe32(pay->i4._1);
+    pak->pay.i4._2 = htobe32(pay->i4._2);
+    pak->pay.i4._3 = htobe32(pay->i4._3);
+    pak->pay.i4._4 = htobe32(pay->i4._4);
     p2p_bcast2(pak);
 }
 

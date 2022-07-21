@@ -50,15 +50,16 @@ int main (int argc, char** argv) {
         usleep(10);
 
         uint8_t n;
-        char* pay;
+        p2p_pay pay;
         while (p2p_step(&n, &pay)) {
-            printf(">>> pak = %d\n", be32toh(*(uint32_t*)pay));
+            printf(">>> pak = %d\n", pay.i1);
         }
 
         if (rand()%20000 == 0) {
-            static int i = 0;
+            static int i = 1;
 printf(">>> send from %d = %d\n", me, i);
-            p2p_bcast((me+1)*10000 + i++);
+            p2p_pay pay = { .i1 = (me+1)*10000 + i++ };
+            p2p_bcast(1, &pay);
         }
         if (rand()%50000 == 0) {
 printf(">>> dump from %d\n", me);
