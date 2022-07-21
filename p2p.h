@@ -1,9 +1,8 @@
 #include <stdint.h>
 
 typedef struct {
-    uint8_t id;
+    uint32_t id;
     union {
-        int tick;
         int i1;
         struct {
             int _1,_2;
@@ -18,8 +17,10 @@ typedef struct {
 } p2p_evt;
 
 typedef struct {
+    char     status;    // 0=receiving, -1=repeated, 1=ok
     uint8_t  src;
     uint32_t seq;
+    uint32_t tick;
     uint8_t  n;
     p2p_evt  evt;
 } p2p_pak;
@@ -27,6 +28,6 @@ typedef struct {
 void p2p_init  (uint8_t me, int port);
 void p2p_quit  (void);
 int  p2p_step  (uint8_t* n, p2p_evt* evt);
-void p2p_bcast (uint8_t n, p2p_evt* evt);
+void p2p_bcast (uint32_t tick, uint8_t n, p2p_evt* evt);
 void p2p_link  (char* host, int port, uint8_t me);
 void p2p_dump  (void);

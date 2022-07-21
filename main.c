@@ -50,21 +50,24 @@ int main (int argc, char** argv) {
         usleep(10);
 
         uint8_t n;
-        p2p_pay pay;
-        while (p2p_step(&n, &pay)) {
-            printf(">>> pak = %d\n", pay.i1);
+        p2p_evt evt;
+        while (p2p_step(&n, &evt)) {
+            printf("<<< [%d] %d/%d\n", me, evt.id, evt.pay.i1);
         }
 
         if (rand()%20000 == 0) {
             static int i = 1;
-printf(">>> send from %d = %d\n", me, i);
-            p2p_pay pay = { .i1 = (me+1)*10000 + i++ };
-            p2p_bcast(1, &pay);
+printf(">>>>>> [%d] %d/%d\n", me, me, i);
+            p2p_evt evt = { me, {.i1=i++} };
+            p2p_bcast(0, 1, &evt);
         }
+#if 1
         if (rand()%50000 == 0) {
-printf(">>> dump from %d\n", me);
+printf("-=-=-=-=- dump from %d\n", me);
 p2p_dump();
+puts("-=-=-=-=-");
         }
+#endif
     }
     p2p_quit();
     return 0;

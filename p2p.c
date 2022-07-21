@@ -59,8 +59,9 @@ static void p2p_bcast2 (p2p_pak* pak) {
         LOCK();
         tcp_send_u8 (s, pak->src);
         tcp_send_u32(s, pak->seq);
+        tcp_send_u32(s, pak->tick);
         tcp_send_u8 (s, pak->n);
-        tcp_send_n  (s, 1+pak->n*sizeof(uint32_t), (char*)&pak->evt);
+        tcp_send_n  (s, (1+pak->n)*sizeof(uint32_t), (char*)&pak->evt);
         UNLOCK();
     }
 }
@@ -89,25 +90,23 @@ static void* f (void* arg) {
         LOCK();
         assert(PAKS_n < PAKS_N);
         p2p_pak* pak = &PAKS[PAKS_n++];
-        pak->seq = 0;   // not ready
+        pak->status = 0;   // not ready
         UNLOCK();
 
-        uint8_t  src = tcp_recv_u8(s);
-        uint32_t seq = tcp_recv_u32(s);
-        uint8_t  n   = tcp_recv_u8(s);
-        *pak = (p2p_pak) { src, 0, n, {} };
-        tcp_recv_n(s, 1+n*sizeof(uint32_t), (char*)&pak->evt);
+        uint8_t  src  = tcp_recv_u8(s);
+        uint32_t seq  = tcp_recv_u32(s);
+        uint32_t tick = tcp_recv_u32(s);
+        uint8_t  n    = tcp_recv_u8(s);
+        *pak = (p2p_pak) { 0, src, seq, tick, n, {} };
+        tcp_recv_n(s, (1+n)*sizeof(uint32_t), (char*)&pak->evt);
 
         LOCK();
-//printf("+++++ %d %d %d\n", src, seq, n);
-        pak->seq = seq; // now ready
-        UNLOCK();
-
-        LOCK();
+        pak->status = -1;
         int cur = NET[src].seq;
         if (seq > cur) {
             assert(seq == cur+1);
             NET[src].seq++;
+            pak->status = 1;
         }
         UNLOCK();
 
@@ -132,27 +131,35 @@ int p2p_step  (uint8_t* n, p2p_evt* evt) {
             assert(pthread_create(&t, NULL,f,(void*)s) == 0);
         }
     }
-    if (PAKS_i<PAKS_n && PAKS[PAKS_i].seq>0) {
-        *n = PAKS[PAKS_i].n;
-        evt->id = PAKS[PAKS_i].evt.id;
-        evt->pay.i4._1 = be32toh(PAKS[PAKS_i].evt.pay.i4._1);
-        evt->pay.i4._2 = be32toh(PAKS[PAKS_i].evt.pay.i4._2);
-        evt->pay.i4._3 = be32toh(PAKS[PAKS_i].evt.pay.i4._3);
-        evt->pay.i4._4 = be32toh(PAKS[PAKS_i].evt.pay.i4._4);
-        PAKS_i++;
-        return 1;
+    if (PAKS_i < PAKS_n) {
+        switch (PAKS[PAKS_i].status) {
+            case 0:         // wait
+                break;
+            case -1:        // skip
+                PAKS_i++;
+                break;
+            case 1:         // ready
+                *n = PAKS[PAKS_i].n;
+                evt->id = be32toh(PAKS[PAKS_i].evt.id);
+                evt->pay.i4._1 = be32toh(PAKS[PAKS_i].evt.pay.i4._1);
+                evt->pay.i4._2 = be32toh(PAKS[PAKS_i].evt.pay.i4._2);
+                evt->pay.i4._3 = be32toh(PAKS[PAKS_i].evt.pay.i4._3);
+                evt->pay.i4._4 = be32toh(PAKS[PAKS_i].evt.pay.i4._4);
+                PAKS_i++;
+                return 1;
+        }
     }
     return 0;
 }
 
-void p2p_bcast (uint8_t n, p2p_evt* evt) {
+void p2p_bcast (uint32_t tick, uint8_t n, p2p_evt* evt) {
     LOCK();
     uint32_t seq = ++NET[ME].seq;
     assert(PAKS_n < PAKS_N);
     p2p_pak* pak = &PAKS[PAKS_n++];
     UNLOCK();
-    *pak = (p2p_pak) { ME, seq, n, {} };
-    pak->evt.id        = evt->id;
+    *pak = (p2p_pak) { 1, ME, seq, tick, n, {} };
+    pak->evt.id        = htobe32(evt->id);
     pak->evt.pay.i4._1 = htobe32(evt->pay.i4._1);
     pak->evt.pay.i4._2 = htobe32(evt->pay.i4._2);
     pak->evt.pay.i4._3 = htobe32(evt->pay.i4._3);
