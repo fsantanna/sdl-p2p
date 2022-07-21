@@ -49,16 +49,17 @@ int main (int argc, char** argv) {
     while (1) {
         usleep(10);
 
+        uint8_t n;
         p2p_evt evt;
-        while (p2p_step(&evt)) {
+        while (p2p_step(&n, &evt)) {
             printf("<<< [%d] %d/%d\n", me, evt.id, evt.pay.i1);
         }
 
         if (rand()%20000 == 0) {
             static int i = 1;
 printf(">>>>>> [%d] %d/%d\n", me, me, i);
-            p2p_evt evt = { me, 1, {.i1=i++} };
-            p2p_bcast(0, &evt);
+            p2p_evt evt = { me, {.i1=i++} };
+            p2p_bcast(0, 1, &evt);
         }
 #if 1
         if (rand()%50000 == 0) {
