@@ -16,9 +16,9 @@ enum {
     TML_EVT_KEY = TML_EVT_NEXT
 };
 
-void cb_sim (tml_evt);
+void cb_sim (p2p_evt);
 void cb_eff (int trv);
-int  cb_rec (SDL_Event* sdl, tml_evt* evt);
+int  cb_rec (SDL_Event* sdl, p2p_evt* evt);
 
 #define FPS   50
 #define WIN   400
@@ -66,7 +66,7 @@ int main (int argc, char** argv) {
     SDL_Quit();
 }
 
-void cb_sim (tml_evt evt) {
+void cb_sim (p2p_evt evt) {
     switch (evt.id) {
         case TML_EVT_INIT:
             G.x  = 0;
@@ -98,13 +98,13 @@ void cb_eff (int trv) {
     SDL_RenderPresent(REN);
 }
 
-int cb_rec (SDL_Event* sdl, tml_evt* evt) {
+int cb_rec (SDL_Event* sdl, p2p_evt* evt) {
     switch (sdl->type) {
         case SDL_QUIT:
             return TML_RET_QUIT;
         case SDL_KEYDOWN: {
             int key = sdl->key.keysym.sym;
-            *evt = (tml_evt) { TML_EVT_KEY, {.i1=key} };
+            *evt = (p2p_evt) { TML_EVT_KEY, 1, {.i1=key} };
             return TML_RET_REC;
         }
     }

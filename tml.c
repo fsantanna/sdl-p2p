@@ -1,5 +1,7 @@
 #include <SDL.h>
 #include <assert.h>
+
+#include "p2p.h"
 #include "tml.h"
 
 #define MAX_EVT 10000
@@ -7,10 +9,10 @@
 
 typedef struct {
     int     tick;
-    tml_evt evt;
+    p2p_evt evt;
 } tml_tick_evt;
 
-void tml_loop (int fps, int n, void* mem, void(*cb_sim)(tml_evt), void(*cb_eff)(int), int(*cb_rec)(SDL_Event*,tml_evt*), int(*cb_trv)(SDL_Event*,int,int,int*)) {
+void tml_loop (int fps, int n, void* mem, void(*cb_sim)(p2p_evt), void(*cb_eff)(int), int(*cb_rec)(SDL_Event*,p2p_evt*), int(*cb_trv)(SDL_Event*,int,int,int*)) {
     char MEM[MAX_MEM][n];
     int mpf = 1000 / fps;
     assert(1000%fps == 0);
@@ -27,7 +29,7 @@ void tml_loop (int fps, int n, void* mem, void(*cb_sim)(tml_evt), void(*cb_eff)(
         tml_tick_evt buf[MAX_EVT];
     } Q = { 0, 0, {} };
 
-    cb_sim((tml_evt) { TML_EVT_INIT });
+    cb_sim((p2p_evt) { TML_EVT_INIT, 0, {} });
     memcpy(MEM[0], mem, n);
     //printf("<<< memcpy %d\n", 0);
 
@@ -35,9 +37,15 @@ _RET_REC_: {
 
     //printf("REC %d\n", S.tick);
     while (1) {
+        p2p_evt evt;
+        if (p2p_step(&evt)) {
+            cb_sim(evt);
+            cb_eff(0);
+#if 0
         if (Q.nxt < Q.tot) {
             cb_sim(Q.buf[Q.nxt++].evt);
             cb_eff(0);
+#endif
         } else {
             uint32_t now = SDL_GetTicks();
             if (now < S.nxt) {
@@ -47,7 +55,7 @@ _RET_REC_: {
             if (now >= S.nxt) {
                 S.tick++;
                 S.nxt += S.mpf;
-                cb_sim((tml_evt) { TML_EVT_TICK, {.tick=S.tick} });
+                cb_sim((p2p_evt) { TML_EVT_TICK, 1, {.i1=S.tick} });
                 if (S.tick % 100 == 0) {
                     assert(MAX_MEM > S.tick/100);
                     memcpy(MEM[S.tick/100], mem, n);    // save w/o events
@@ -56,7 +64,7 @@ _RET_REC_: {
                 cb_eff(0);
             } else {
                 SDL_Event sdl;
-                tml_evt   evt;
+                p2p_evt   evt;
                 assert(SDL_PollEvent(&sdl));
 
                 switch (cb_rec(&sdl, &evt)) {
@@ -64,10 +72,16 @@ _RET_REC_: {
                         break;
                     case TML_RET_QUIT:
                         return;
+#if 0
                     case TML_RET_REC:
                         assert(Q.tot < MAX_EVT);
                         Q.buf[Q.tot++] = (tml_tick_evt) { S.tick, evt };
                         break;
+#endif
+                    case TML_RET_REC: {
+                        p2p_bcast(S.tick, &evt);
+                        break;
+                    }
                     case TML_RET_TRV:
                         goto _RET_TRV_;
                 }
@@ -109,7 +123,7 @@ _RET_TRV_: {
 
             for (int i=fst; i<=new; i++) {
                 if (i > fst) { // first tick already loaded
-                    cb_sim((tml_evt) { TML_EVT_TICK, {.tick=i} });
+                    cb_sim((p2p_evt) { TML_EVT_TICK, 1, {.i1=i} });
                 }
                 while (e<Q.tot && Q.buf[e].tick==i) {
                     cb_sim(Q.buf[e].evt);
