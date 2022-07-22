@@ -87,21 +87,17 @@ static void* f (void* arg) {
     }
 
     while (1) {
+        uint8_t  src = tcp_recv_u8(s);
+        uint32_t seq = tcp_recv_u32(s);
+        uint8_t  id  = tcp_recv_u8(s);
+        uint8_t  n   = tcp_recv_u8(s);
+
         LOCK();
         assert(PAKS_n < PAKS_N);
         p2p_pak* pak = &PAKS[PAKS_n++];
-        pak->status = 0;   // not ready
-        UNLOCK();
+        *pak = (p2p_pak) { -1, src, seq, { id, n, {} } };
+        tcp_recv_n(s, n*sizeof(uint32_t), (char*)&pak->evt.pay); // TODO: out lock
 
-        uint8_t  src  = tcp_recv_u8(s);
-        uint32_t seq  = tcp_recv_u32(s);
-        uint8_t  id   = tcp_recv_u8(s);
-        uint8_t  n    = tcp_recv_u8(s);
-        *pak = (p2p_pak) { 0, src, seq, { id, n, {} } };
-        tcp_recv_n(s, n*sizeof(uint32_t), (char*)&pak->evt.pay);
-
-        LOCK();
-        pak->status = -1;
         int cur = NET[src].seq;
         if (seq > cur) {
             assert(seq == cur+1);
