@@ -157,7 +157,6 @@ void p2p_bcast (p2p_evt* evt) {
     uint32_t seq = ++NET[ME].seq;
     assert(PAKS_n < PAKS_N);
     p2p_pak* pak = &PAKS[PAKS_n++];
-    UNLOCK();
     *pak = (p2p_pak) { 1, ME, seq, {} };
     pak->evt.id        = evt->id;
     pak->evt.n         = evt->n;
@@ -165,6 +164,7 @@ void p2p_bcast (p2p_evt* evt) {
     pak->evt.pay.i4._2 = htobe32(evt->pay.i4._2);
     pak->evt.pay.i4._3 = htobe32(evt->pay.i4._3);
     pak->evt.pay.i4._4 = htobe32(evt->pay.i4._4);
+    UNLOCK();
     p2p_bcast2(pak);
 }
 
